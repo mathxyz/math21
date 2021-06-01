@@ -1,0 +1,397 @@
+#include <math21_kernels.h>
+
+//#define MATH21_IS_FROM_CPU
+
+#if !defined(MATH21_IS_FROM_CPU)
+#if defined(MATH21_FLAG_USE_CUDA)
+#define MATH21_IS_FROM_CUDA
+#elif defined(MATH21_FLAG_USE_OPENCL)
+#define MATH21_IS_FROM_OPENCL
+#endif
+#endif
+
+#if defined(MATH21_IS_FROM_CPU)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_KERNEL_GET_ID()
+#define MATH21_KERNEL_TEMPLATE_HEADER(X) template<typename X>
+#define MATH21_KERNEL_EXPORT
+#define MATH21_KERNEL_GLOBAL
+#define MATH21_KERNEL_INPUT_ID , NumN id
+#define MATH21_DEVICE_F_MIN_LIKE_PTR math21_type_f_min_like f_shrink_min_like_ptr,
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR math21_type_f_argmin_like f_shrink_argmin_like_ptr,
+#define MATH21_DEVICE_F_ADD_LIKE_PTR math21_type_f_add_like f_bc_add_like_ptr,
+#define MATH21_DEVICE_F_SIN_LIKE_PTR math21_type_f_sin_like f_bc_sin_like_ptr,
+#define MATH21_DEVICE_F_KX_LIKE_PTR math21_type_f_kx_like f_kx_like_ptr,
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR math21_type_f_addto_like f_addto_like_ptr,
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y) X Y,
+
+#elif defined(MATH21_IS_FROM_CUDA)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_KERNEL_GET_ID() int id = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x; id +=1;
+#define MATH21_KERNEL_TEMPLATE_HEADER(X) template<typename X>
+#define MATH21_KERNEL_EXPORT __global__
+#define MATH21_KERNEL_GLOBAL
+#define MATH21_KERNEL_INPUT_ID
+#define MATH21_DEVICE_F_MIN_LIKE_PTR math21_type_f_min_like f_shrink_min_like_ptr,
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR math21_type_f_argmin_like f_shrink_argmin_like_ptr,
+#define MATH21_DEVICE_F_ADD_LIKE_PTR math21_type_f_add_like f_bc_add_like_ptr,
+#define MATH21_DEVICE_F_SIN_LIKE_PTR math21_type_f_sin_like f_bc_sin_like_ptr,
+#define MATH21_DEVICE_F_KX_LIKE_PTR math21_type_f_kx_like f_kx_like_ptr,
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR math21_type_f_addto_like f_addto_like_ptr,
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y) X Y,
+
+#elif defined(MATH21_IS_FROM_OPENCL)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_OPENCL_TEMPLATE_3(X, opencl_kernel, NumReal)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, f_shrink_min_like_ptr)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, f_shrink_argmin_like_ptr)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, Y)
+#define MATH21_KERNEL_GET_ID() size_t global_x = get_global_id(0); size_t global_y = get_global_id(1); size_t global_z = get_global_id(2); size_t id = global_z * get_global_size(0) * get_global_size(1) + global_y * get_global_size(0) + global_x; id +=1;
+#define MATH21_KERNEL_TEMPLATE_HEADER(X)
+#define MATH21_KERNEL_EXPORT __kernel
+#define MATH21_KERNEL_GLOBAL __global
+#define MATH21_KERNEL_INPUT_ID
+#define MATH21_DEVICE_F_MIN_LIKE_PTR
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR
+#define MATH21_DEVICE_F_ADD_LIKE_PTR
+#define MATH21_DEVICE_F_SIN_LIKE_PTR
+#define MATH21_DEVICE_F_KX_LIKE_PTR
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y)
+
+#else
+#error MATH21_IS_FROM_NONE
+#endif
+
+#if defined(MATH21_IS_FROM_OPENCL)
+#include <math21_opencl_device_code.h>
+#endif
+
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void
+MATH21_MAKE_KERNEL_NAME_2(math21_template_tensor_f_shrink)(MATH21_DEVICE_F_MIN_LIKE_PTR
+                                                           NumN n, MATH21_KERNEL_GLOBAL const NumReal *x,
+                                                           MATH21_KERNEL_GLOBAL NumReal *y,
+                                                           NumN dims_x, MATH21_KERNEL_GLOBAL const NumN *dx,
+                                                           NumN dims_y,
+                                                           MATH21_KERNEL_GLOBAL const NumN *dy,
+                                                           NumN nb, MATH21_KERNEL_GLOBAL const NumN *b,
+                                                           NumN nv, NumN dims_v, MATH21_KERNEL_GLOBAL
+                                                           const NumN *dv MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+    dx -= 1;
+    dy -= 1;
+    b -= 1;
+    dv -= 1;
+#endif
+
+    if (id > n) return;
+    NumN iy;
+    NumReal value = 0;
+    iy = id;
+    if (n == 1) {
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            value = (f_shrink_min_like_ptr)(value, x[iv], iv);
+        }
+    } else {
+        NumN _indexx[MATH21_KERNEL_ARRAY_MAX_LENGTH], _indexy[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                _indexv[MATH21_KERNEL_ARRAY_MAX_LENGTH], _index0[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                ix;
+        NumN *indexx = math21_device_pointer_NumN_decrease_one(_indexx);
+        NumN *indexy = math21_device_pointer_NumN_decrease_one(_indexy);
+        NumN *indexv = math21_device_pointer_NumN_decrease_one(_indexv);
+        NumN *index0 = math21_device_pointer_NumN_decrease_one(_index0);
+
+        // 1->n, n->n, n->1
+        math21_device_index_1d_to_nd(indexy, iy, dy, dims_y);
+        math21_device_index_replace_inc_global_1(nb, b, index0, indexy, (NumN) 1);
+
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            math21_device_index_1d_to_nd(indexv, iv, dv, dims_v);
+            math21_device_index_replace_inc(nb, index0, indexx, indexv, (NumN) 0);
+            math21_device_index_nd_to_1d(indexx, &ix, dx, dims_x);
+            value = (f_shrink_min_like_ptr)(value, x[ix], iv);
+        }
+    }
+    y[iy] = value;
+}
+
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void
+MATH21_MAKE_KERNEL_NAME_3(math21_template_tensor_f_shrink)(MATH21_DEVICE_F_ARGMIN_LIKE_PTR
+                                                           NumN n, MATH21_KERNEL_GLOBAL const NumReal *x,
+                                                           MATH21_KERNEL_GLOBAL NumReal *y,
+                                                           NumN dims_x, MATH21_KERNEL_GLOBAL const NumN *dx,
+                                                           NumN dims_y,
+                                                           MATH21_KERNEL_GLOBAL const NumN *dy,
+                                                           NumN nb, MATH21_KERNEL_GLOBAL const NumN *b,
+                                                           NumN nv, NumN dims_v, MATH21_KERNEL_GLOBAL
+                                                           const NumN *dv MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+    dx -= 1;
+    dy -= 1;
+    b -= 1;
+    dv -= 1;
+#endif
+
+    if (id > n) return;
+    NumN iy;
+    NumReal value = 0;
+    NumN i_value = 0;
+    iy = id;
+    if (n == 1) {
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            value = (f_shrink_argmin_like_ptr)(value, x[iv], &i_value, iv, iv);
+        }
+    } else {
+        NumN _indexx[MATH21_KERNEL_ARRAY_MAX_LENGTH], _indexy[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                _indexv[MATH21_KERNEL_ARRAY_MAX_LENGTH], _index0[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                ix;
+        NumN *indexx = math21_device_pointer_NumN_decrease_one(_indexx);
+        NumN *indexy = math21_device_pointer_NumN_decrease_one(_indexy);
+        NumN *indexv = math21_device_pointer_NumN_decrease_one(_indexv);
+        NumN *index0 = math21_device_pointer_NumN_decrease_one(_index0);
+
+        // 1->n, n->n, n->1
+        math21_device_index_1d_to_nd(indexy, iy, dy, dims_y);
+        math21_device_index_replace_inc_global_1(nb, b, index0, indexy, (NumN) 1);
+
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            math21_device_index_1d_to_nd(indexv, iv, dv, dims_v);
+            math21_device_index_replace_inc(nb, index0, indexx, indexv, (NumN) 0);
+            math21_device_index_nd_to_1d(indexx, &ix, dx, dims_x);
+            // globally
+//                value = (f_shrink_argmin_like_ptr)(value, x[ix], &i_value, ix, iv);
+            // locally
+            value = (f_shrink_argmin_like_ptr)(value, x[ix], &i_value, iv, iv);
+        }
+    }
+    y[iy] = i_value;
+}
+
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void
+MATH21_MAKE_KERNEL_NAME_PAIR(math21_template_tensor_f_inner_product_like_shrink, f_inner_product_like_ptr)(
+        MATH21_DEVICE_MAKE_F_LIKE_PTR(math21_type_f_inner_product_like, f_inner_product_like_ptr)
+        NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x1,
+        MATH21_KERNEL_GLOBAL const NumReal *x2,
+        MATH21_KERNEL_GLOBAL NumReal *y,
+        NumN dims_x, MATH21_KERNEL_GLOBAL const NumN *dx,
+        NumN dims_y,
+        MATH21_KERNEL_GLOBAL const NumN *dy,
+        NumN nb, MATH21_KERNEL_GLOBAL const NumN *b,
+        NumN nv, NumN dims_v, MATH21_KERNEL_GLOBAL
+        const NumN *dv MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x1 -= 1;
+    x2 -= 1;
+    y -= 1;
+    dx -= 1;
+    dy -= 1;
+    b -= 1;
+    dv -= 1;
+#endif
+
+    if (id > n) return;
+    NumN iy;
+    NumReal value = 0;
+    iy = id;
+    if (n == 1) {
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            value = (f_inner_product_like_ptr)(value, x1[iv], x2[iv], iv);
+        }
+    } else {
+        NumN _indexx[MATH21_KERNEL_ARRAY_MAX_LENGTH], _indexy[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                _indexv[MATH21_KERNEL_ARRAY_MAX_LENGTH], _index0[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+                ix;
+        NumN *indexx = math21_device_pointer_NumN_decrease_one(_indexx);
+        NumN *indexy = math21_device_pointer_NumN_decrease_one(_indexy);
+        NumN *indexv = math21_device_pointer_NumN_decrease_one(_indexv);
+        NumN *index0 = math21_device_pointer_NumN_decrease_one(_index0);
+
+        // 1->n, n->n, n->1
+        math21_device_index_1d_to_nd(indexy, iy, dy, dims_y);
+        math21_device_index_replace_inc_global_1(nb, b, index0, indexy, (NumN) 1);
+
+        NumN iv;
+        for (iv = 1; iv <= nv; ++iv) {
+            math21_device_index_1d_to_nd(indexv, iv, dv, dims_v);
+            math21_device_index_replace_inc(nb, index0, indexx, indexv, (NumN) 0);
+            math21_device_index_nd_to_1d(indexx, &ix, dx, dims_x);
+            value = (f_inner_product_like_ptr)(value, x1[ix], x2[ix], iv);
+        }
+    }
+    y[iy] = value;
+}
+
+// y = x1 + x2
+// a special kind of sub
+// x1, x2 sub-tensor of y
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void
+MATH21_MAKE_KERNEL_NAME_PAIR(math21_template_tensor_f_with_broadcast_in_dn, f_bc_add_like_ptr)(
+        MATH21_DEVICE_F_ADD_LIKE_PTR NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x1,
+        MATH21_KERNEL_GLOBAL const NumReal *x2,
+        MATH21_KERNEL_GLOBAL NumReal *y,
+        NumN dims_x1, MATH21_KERNEL_GLOBAL const NumN *dx1,
+        NumN dims_x2, MATH21_KERNEL_GLOBAL const NumN *dx2,
+        NumN dims_y, MATH21_KERNEL_GLOBAL const NumN *dy MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x1 -= 1;
+    x2 -= 1;
+    y -= 1;
+    dx1 -= 1;
+    dx2 -= 1;
+    dy -= 1;
+#endif
+
+    if (id > n) return;
+    NumN _indexx1[MATH21_KERNEL_ARRAY_MAX_LENGTH], _indexx2[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+            _indexy[MATH21_KERNEL_ARRAY_MAX_LENGTH], ix1, ix2, iy;
+    NumN *indexx1 = math21_device_pointer_NumN_decrease_one(_indexx1);
+    NumN *indexx2 = math21_device_pointer_NumN_decrease_one(_indexx2);
+    NumN *indexy = math21_device_pointer_NumN_decrease_one(_indexy);
+
+    iy = id;
+    math21_device_index_1d_to_nd(indexy, iy, dy, dims_y);
+    math21_device_broadcast_index_to_original_brackets(indexy, dx1, indexx1, dims_x1);
+    math21_device_index_nd_to_1d(indexx1, &ix1, dx1, dims_x1);
+    math21_device_broadcast_index_to_original_brackets(indexy, dx2, indexx2, dims_x2);
+    math21_device_index_nd_to_1d(indexx2, &ix2, dx2, dims_x2);
+    y[iy] = (f_bc_add_like_ptr)(x1[ix1], x2[ix2]);
+}
+
+// y = x1 if x2 = 1
+// a special kind of sub
+// x1, x2 sub-tensor of y
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_1(math21_template_tensor_set_using_mask_in_dn)(
+        NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x1,
+        MATH21_KERNEL_GLOBAL const NumReal *x2,
+        MATH21_KERNEL_GLOBAL NumReal *y,
+        NumN dims_x1, MATH21_KERNEL_GLOBAL const NumN *dx1,
+        NumN dims_x2, MATH21_KERNEL_GLOBAL const NumN *dx2,
+        NumN dims_y, MATH21_KERNEL_GLOBAL const NumN *dy MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x1 -= 1;
+    x2 -= 1;
+    y -= 1;
+    dx1 -= 1;
+    dx2 -= 1;
+    dy -= 1;
+#endif
+
+    if (id > n) return;
+    NumN _indexx1[MATH21_KERNEL_ARRAY_MAX_LENGTH], _indexx2[MATH21_KERNEL_ARRAY_MAX_LENGTH],
+            _indexy[MATH21_KERNEL_ARRAY_MAX_LENGTH], ix1, ix2, iy;
+    NumN *indexx1 = math21_device_pointer_NumN_decrease_one(_indexx1);
+    NumN *indexx2 = math21_device_pointer_NumN_decrease_one(_indexx2);
+    NumN *indexy = math21_device_pointer_NumN_decrease_one(_indexy);
+
+    iy = id;
+    math21_device_index_1d_to_nd(indexy, iy, dy, dims_y);
+    math21_device_broadcast_index_to_original_brackets(indexy, dx1, indexx1, dims_x1);
+    math21_device_index_nd_to_1d(indexx1, &ix1, dx1, dims_x1);
+    math21_device_broadcast_index_to_original_brackets(indexy, dx2, indexx2, dims_x2);
+    math21_device_index_nd_to_1d(indexx2, &ix2, dx2, dims_x2);
+    if (x2[ix2] == 1) {
+        y[iy] = x1[ix1];
+    }
+}
+
+// y = x1 + x2
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_PAIR(math21_template_vector_f_add_like, f_bc_add_like_ptr)(
+        MATH21_DEVICE_F_ADD_LIKE_PTR NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x1,
+        MATH21_KERNEL_GLOBAL const NumReal *x2,
+        MATH21_KERNEL_GLOBAL NumReal *y MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x1 -= 1;
+    x2 -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN iy;
+    iy = id;
+    y[iy] = (f_bc_add_like_ptr)(x1[iy], x2[iy]);
+}
+
+// y = x1 when x2 = 1
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_1(math21_template_vector_set_using_mask)(
+        NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x1,
+        MATH21_KERNEL_GLOBAL const NumReal *x2,
+        MATH21_KERNEL_GLOBAL NumReal *y MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x1 -= 1;
+    x2 -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN iy;
+    iy = id;
+    if (x2[iy] == 1) {
+        y[iy] = x1[iy];
+    }
+}
+
+// y = f(x)
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_PAIR(math21_template_vector_f_sin_like, f_bc_sin_like_ptr)(
+        MATH21_DEVICE_F_SIN_LIKE_PTR NumN n,
+        MATH21_KERNEL_GLOBAL const NumReal *x,
+        MATH21_KERNEL_GLOBAL NumReal *y MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN iy;
+    iy = id;
+    y[iy] = (f_bc_sin_like_ptr)(x[iy]);
+}
+
+// y = f(k, x)
+MATH21_KERNEL_TEMPLATE_HEADER(NumReal)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_PAIR(math21_template_vector_f_kx_like, f_kx_like_ptr)(
+        MATH21_DEVICE_F_KX_LIKE_PTR NumN n,
+        NumReal k,
+        MATH21_KERNEL_GLOBAL const NumReal *x,
+        MATH21_KERNEL_GLOBAL NumReal *y MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN iy;
+    iy = id;
+    y[iy] = (f_kx_like_ptr)(k, x[iy]);
+}

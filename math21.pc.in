@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@CMAKE_INSTALL_LIBDIR@
+includedir=@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: math21
+Description: simple, small, math library
+Version: @GENERIC_LIB_VERSION@
+Libs: -L${libdir} -lmath21
+Cflags: -I${includedir}

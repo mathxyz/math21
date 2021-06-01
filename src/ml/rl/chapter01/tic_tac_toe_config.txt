@@ -1,0 +1,4 @@
+2       #number of rows
+4       #number of cols
+100     #epochs
+2       # 1 or 2, you play first or second.

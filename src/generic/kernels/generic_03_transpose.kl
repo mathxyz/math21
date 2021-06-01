@@ -1,0 +1,120 @@
+#include <math21_kernels.h>
+
+//#define MATH21_IS_FROM_CPU
+
+#if !defined(MATH21_IS_FROM_CPU)
+#if defined(MATH21_FLAG_USE_CUDA)
+#define MATH21_IS_FROM_CUDA
+#elif defined(MATH21_FLAG_USE_OPENCL)
+#define MATH21_IS_FROM_OPENCL
+#endif
+#endif
+
+#if defined(MATH21_IS_FROM_CPU)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_MAKE_KERNEL_NAME_TWO(X, Y1, Y2) MATH21_MACRO_CAT_2(X, cpu_kernel)
+#define MATH21_KERNEL_GET_ID()
+#define MATH21_KERNEL_TEMPLATE_HEADER(X) template<typename X>
+#define MATH21_KERNEL_TEMPLATE_THE_HEADER_2(X1, X2) template<typename X1, typename X2>
+#define MATH21_KERNEL_EXPORT
+#define MATH21_KERNEL_GLOBAL
+#define MATH21_KERNEL_INPUT_ID , NumN id
+#define MATH21_DEVICE_F_MIN_LIKE_PTR math21_type_f_min_like f_shrink_min_like_ptr,
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR math21_type_f_argmin_like f_shrink_argmin_like_ptr,
+#define MATH21_DEVICE_F_ADD_LIKE_PTR math21_type_f_add_like f_bc_add_like_ptr,
+#define MATH21_DEVICE_F_SIN_LIKE_PTR math21_type_f_sin_like f_bc_sin_like_ptr,
+#define MATH21_DEVICE_F_KX_LIKE_PTR math21_type_f_kx_like f_kx_like_ptr,
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR math21_type_f_addto_like f_addto_like_ptr,
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y) X Y,
+
+#elif defined(MATH21_IS_FROM_CUDA)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_MAKE_KERNEL_NAME_TWO(X, Y1, Y2) MATH21_MACRO_CAT_2(X, cuda_kernel)
+#define MATH21_KERNEL_GET_ID() int id = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x; id +=1;
+#define MATH21_KERNEL_TEMPLATE_HEADER(X) template<typename X>
+#define MATH21_KERNEL_TEMPLATE_THE_HEADER_2(X1, X2) template<typename X1, typename X2>
+#define MATH21_KERNEL_EXPORT __global__
+#define MATH21_KERNEL_GLOBAL
+#define MATH21_KERNEL_INPUT_ID
+#define MATH21_DEVICE_F_MIN_LIKE_PTR math21_type_f_min_like f_shrink_min_like_ptr,
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR math21_type_f_argmin_like f_shrink_argmin_like_ptr,
+#define MATH21_DEVICE_F_ADD_LIKE_PTR math21_type_f_add_like f_bc_add_like_ptr,
+#define MATH21_DEVICE_F_SIN_LIKE_PTR math21_type_f_sin_like f_bc_sin_like_ptr,
+#define MATH21_DEVICE_F_KX_LIKE_PTR math21_type_f_kx_like f_kx_like_ptr,
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR math21_type_f_addto_like f_addto_like_ptr,
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y) X Y,
+
+#elif defined(MATH21_IS_FROM_OPENCL)
+#define MATH21_MAKE_KERNEL_NAME_1(X) MATH21_OPENCL_TEMPLATE_3(X, opencl_kernel, NumReal)
+#define MATH21_MAKE_KERNEL_NAME_2(X) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, f_shrink_min_like_ptr)
+#define MATH21_MAKE_KERNEL_NAME_3(X) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, f_shrink_argmin_like_ptr)
+#define MATH21_MAKE_KERNEL_NAME_PAIR(X, Y) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, NumReal, Y)
+#define MATH21_MAKE_KERNEL_NAME_TWO(X, Y1, Y2) MATH21_OPENCL_TEMPLATE_4(X, opencl_kernel, Y1, Y2)
+#define MATH21_KERNEL_GET_ID() size_t global_x = get_global_id(0); size_t global_y = get_global_id(1); size_t global_z = get_global_id(2); size_t id = global_z * get_global_size(0) * get_global_size(1) + global_y * get_global_size(0) + global_x; id +=1;
+#define MATH21_KERNEL_TEMPLATE_HEADER(X)
+#define MATH21_KERNEL_TEMPLATE_THE_HEADER_2(X1, X2)
+#define MATH21_KERNEL_EXPORT __kernel
+#define MATH21_KERNEL_GLOBAL __global
+#define MATH21_KERNEL_INPUT_ID
+#define MATH21_DEVICE_F_MIN_LIKE_PTR
+#define MATH21_DEVICE_F_ARGMIN_LIKE_PTR
+#define MATH21_DEVICE_F_ADD_LIKE_PTR)
+#define MATH21_DEVICE_F_SIN_LIKE_PTR
+#define MATH21_DEVICE_F_KX_LIKE_PTR
+#define MATH21_DEVICE_F_ADDTO_LIKE_PTR
+#define MATH21_DEVICE_MAKE_F_LIKE_PTR(X, Y)
+
+#else
+#error MATH21_IS_FROM_NONE
+#endif
+
+#if defined(MATH21_IS_FROM_OPENCL)
+#include <math21_opencl_device_code.h>
+#endif
+
+// y = x.t
+MATH21_KERNEL_TEMPLATE_THE_HEADER_2(NumType1, NumType2)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_TWO(math21_template_matrix_transpose, NumType1, NumType2)(
+        NumN n,
+        MATH21_KERNEL_GLOBAL const NumType1 *x,
+        MATH21_KERNEL_GLOBAL NumType2 *y,
+        NumN d1_x, NumN d2_x MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN i1, i2, ix, iy;
+    iy = id;
+    math21_device_index_1d_to_2d(&i2, &i1, iy, d2_x, d1_x);
+    math21_device_index_2d_to_1d(i1, i2, &ix, d1_x, d2_x);
+    y[iy] = x[ix];
+}
+
+// swap axes 2 and 4 in dim5 tensor
+// (d1, d2, d3, d4, d5) -> (d1, d4, d3, d2, d5)
+MATH21_KERNEL_TEMPLATE_THE_HEADER_2(NumType1, NumType2)
+MATH21_KERNEL_EXPORT void MATH21_MAKE_KERNEL_NAME_TWO(math21_template_tensor_swap_axes_24_in_d5, NumType1, NumType2)(
+        NumN n,
+        MATH21_KERNEL_GLOBAL const NumType1 *x,
+        MATH21_KERNEL_GLOBAL NumType2 *y,
+        NumN d1, NumN d2, NumN d3, NumN d4, NumN d5 MATH21_KERNEL_INPUT_ID) {
+    MATH21_KERNEL_GET_ID();
+#if defined(MATH21_IS_FROM_OPENCL)
+    x -= 1;
+    y -= 1;
+#endif
+    if (id > n) return;
+    NumN i1, i2, i3, i4, i5, ix, iy;
+    iy = id;
+    math21_device_index_1d_to_5d(&i1, &i4, &i3, &i2, &i5, iy, d1, d4, d3, d2, d5);
+    math21_device_index_5d_to_1d(i1, i2, i3, i4, i5, &ix, d1, d2, d3, d4, d5);
+    y[iy] = x[ix];
+}

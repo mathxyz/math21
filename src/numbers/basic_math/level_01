@@ -1,0 +1,121 @@
+/* Copyright 2015 The math21 Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
+
+#include "inner_cc.h"
+#include "level_01.h"
+#include "level_01_c.h"
+
+namespace math21 {
+    M21_EXPORT NumB xjIsEven(const NumZ &x) {
+        if (xjabs(x) % 2 == 0) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    M21_EXPORT NumZ xjR2Z_upper(const NumR &x) {
+        NumZ y = (NumZ) x;
+        if (y < x) {
+            y = y + 1;
+        }
+        return y;
+    }
+
+    M21_EXPORT NumZ xjR2Z_lower(const NumR &x) {
+        NumZ y = (NumZ) x;
+        if (y > x) {
+            y = y - 1;
+        }
+        return y;
+    }
+
+    // ratio >= 0
+    M21_EXPORT NumB xjIsApproximatelyEqual(const NumR &a, const NumR &b, NumR ratio) {
+        NumR c = xjabs(b) * ratio;
+        if (a >= b - c && a <= b + c) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    M21_EXPORT NumZ xjfloor(NumR x) {
+        return (NumZ) floor(x);
+    }
+
+    M21_EXPORT NumZ xjceil(NumR x) {
+        return (NumZ) ceil(x);
+    }
+
+    // n!/(n-r)!
+    M21_EXPORT NumN xjfactorial_similar(NumN n, NumN r) {
+        math21_tool_assert(r <= n);
+        NumN n_m_r = n - r;
+        NumN i;
+        NumN y = 1;
+        for (i = n_m_r + 1; i <= n; ++i) {
+            y = y * i;
+        }
+        return y;
+    }
+
+    // f(n) = n!
+    // 0! = 1
+    M21_EXPORT NumN xjfactorial(NumN n) {
+        return xjfactorial_similar(n, n);
+    }
+
+    M21_EXPORT NumN xj_n_choose_r(NumN n, NumN r) {
+        math21_tool_assert(r <= n);
+        return xjfactorial_similar(n, r) / xjfactorial(r);
+    }
+
+    M21_EXPORT NumN xj_combination_rep(NumN n, NumN r) {
+        if (n == 0)return 1;
+        return xj_n_choose_r(r + n - 1, r);
+    }
+
+    // has some error when ||p|| < MATH21_MIN_POSITIVE_NUMR
+    // p = (x, y)
+    // convert point (x, y) to angle in [0, 2*pi)
+    M21_EXPORT NumR xjpoint2angle(NumR x, NumR y) {
+        if (xjabs(x) < MATH21_MIN_POSITIVE_NUMR) {
+            if (y > 0) {
+                return MATH21_PI / 2.0;
+            } else {
+                return 3 * MATH21_PI / 2.0;
+            }
+        }
+        if (xjabs(y) < MATH21_MIN_POSITIVE_NUMR) {
+            if (x > 0) {
+                return 0;
+            } else {
+                return MATH21_PI;
+            }
+        }
+        NumR theta = xjatan(y / x);
+        math21_tool_assert(xjabs(theta) <= MATH21_PI / 2.0);
+        if (x > 0) {
+            if (y > 0) {
+                return theta;
+            } else {
+                return 2 * MATH21_PI + theta;
+            }
+        } else {
+            return MATH21_PI + theta;
+        }
+    }
+}

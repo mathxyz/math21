@@ -1,0 +1,437 @@
+#if !defined(MATH21_IS_FROM_OPENCL)
+
+#include <math.h>
+
+#endif
+
+#include "level_02_c.h"
+
+// see xj_index_1d_to_nd
+// see math21_operator_number_index_1d_to_nd
+// d is shape, index from 1
+M21_EXPORT void math21_device_index_1d_to_nd(NumN *x, NumN y, MATH21_DEVICE_GLOBAL const NumN *d, NumN n) {
+    y -= 1;
+    NumN i;
+    for (i = n; i >= 1; --i) {
+        x[i] = y % d[i] + 1;
+        y = y / d[i];
+    }
+}
+
+// d is shape, index from 1
+M21_EXPORT void math21_device_index_nd_to_1d(const NumN *x, NumN *py, MATH21_DEVICE_GLOBAL const NumN *d, NumN n) {
+    NumN i;
+    NumN y = 0;
+    for (i = 1; i <= n; ++i) {
+        y *= d[i];
+        y += (x[i] - 1);
+    }
+    *py = (y + 1);
+}
+
+// see xj_index_1d_to_5d
+M21_EXPORT void math21_device_index_1d_to_5d(NumN *x1, NumN *x2, NumN *x3, NumN *x4, NumN *x5, NumN y,
+                                             NumN d1, NumN d2, NumN d3, NumN d4, NumN d5) {
+    y -= 1;
+    *x5 = y % d5 + 1;
+    y = y / d5;
+    *x4 = y % d4 + 1;
+    y = y / d4;
+    *x3 = y % d3 + 1;
+    y = y / d3;
+    *x2 = y % d2 + 1;
+    y = y / d2;
+    *x1 = y % d1 + 1;
+}
+
+// see xj_index_5d_to_1d
+M21_EXPORT void math21_device_index_5d_to_1d(NumN x1, NumN x2, NumN x3, NumN x4, NumN x5, NumN *py,
+                                             NumN d1, NumN d2, NumN d3, NumN d4, NumN d5) {
+    NumN y = 0;
+    y *= d1;
+    y += (x1 - 1);
+    y *= d2;
+    y += (x2 - 1);
+    y *= d3;
+    y += (x3 - 1);
+    y *= d4;
+    y += (x4 - 1);
+    y *= d5;
+    y += (x5 - 1);
+    *py = y + 1;
+}
+
+M21_EXPORT void math21_device_index_1d_to_4d(NumN *x1, NumN *x2, NumN *x3, NumN *x4, NumN y,
+                                             NumN d1, NumN d2, NumN d3, NumN d4) {
+    y -= 1;
+    *x4 = y % d4 + 1;
+    y = y / d4;
+    *x3 = y % d3 + 1;
+    y = y / d3;
+    *x2 = y % d2 + 1;
+    y = y / d2;
+    *x1 = y % d1 + 1;
+}
+
+M21_EXPORT void math21_device_index_4d_to_1d(NumN x1, NumN x2, NumN x3, NumN x4, NumN *py,
+                                             NumN d1, NumN d2, NumN d3, NumN d4) {
+    NumN y = 0;
+    y *= d1;
+    y += (x1 - 1);
+    y *= d2;
+    y += (x2 - 1);
+    y *= d3;
+    y += (x3 - 1);
+    y *= d4;
+    y += (x4 - 1);
+    *py = y + 1;
+}
+
+M21_EXPORT void math21_device_index_1d_to_3d(NumN *x1, NumN *x2, NumN *x3, NumN y,
+                                             NumN d1, NumN d2, NumN d3) {
+    y -= 1;
+    *x3 = y % d3 + 1;
+    y = y / d3;
+    *x2 = y % d2 + 1;
+    y = y / d2;
+    *x1 = y % d1 + 1;
+}
+
+M21_EXPORT void math21_device_index_1d_to_3d_fast(NumN *x1, NumN *x2, NumN *x3,
+                                                  NumN y, NumN d2, NumN d3) {
+    y -= 1;
+    *x3 = y % d3 + 1;
+    y = y / d3;
+    *x2 = y % d2 + 1;
+    *x1 = y / d2 + 1;
+}
+
+M21_EXPORT void math21_device_index_3d_to_1d(NumN x1, NumN x2, NumN x3, NumN *py,
+                                             NumN d1, NumN d2, NumN d3) {
+    NumN y = 0;
+    y *= d1;
+    y += (x1 - 1);
+    y *= d2;
+    y += (x2 - 1);
+    y *= d3;
+    y += (x3 - 1);
+    *py = y + 1;
+}
+
+M21_EXPORT void math21_device_index_3d_to_1d_fast(NumN x1, NumN x2, NumN x3, NumN *py,
+                                                  NumN d2, NumN d3) {
+    *py = ((x1 - 1) * d2 + (x2 - 1)) * d3 + x3;
+}
+
+// index >=1
+// 0 means no index.
+M21_EXPORT NumN math21_device_image_get_1d_index(NumN ich, NumN ir, NumN ic,
+                                                 NumN nch, NumN nr, NumN nc, NumB isInterleaved) {
+    if (ich == 0 || ich > nch || ir == 0 || ir > nr || ic == 0 || ic > nc)return 0;
+    if (!isInterleaved) {
+        return ((ich - 1) * nr + (ir - 1)) * nc + ic;
+    } else {
+        return ((ir - 1) * nc + (ic - 1)) * nch + ich;
+    }
+}
+
+M21_EXPORT NumR math21_device_image_get_pixel(MATH21_DEVICE_GLOBAL const NumR *data, NumN ich, NumN ir, NumN ic,
+                                              NumN nch, NumN nr, NumN nc, NumB isInterleaved) {
+    if (ich == 0 || ich > nch || ir == 0 || ir > nr || ic == 0 || ic > nc)return 0;
+    if (!isInterleaved) {
+        return data[((ich - 1) * nr + (ir - 1)) * nc + ic];
+    } else {
+        return data[((ir - 1) * nc + (ic - 1)) * nch + ich];
+    }
+}
+
+/** bilinear interpolation
+  Note: Contrary to what the name suggests, the interpolation is not linear.
+  f(x, y) <- f00*(1-x)*(1-y) + f10*x*(1-y) + f01*(1-x)*y + f11*x*y, here f10 :=f(1,0)
+  f(x, y) <- (1-x, x) * A * (1-y,y).t, where A = (f00, f01; f10, f11)
+  f(x, y) <- b1 + b2*x + b3*y + b4*x*y, where b1 = f00, b2 = f10 - f00, b3 = f01-f00, b4 = f00+f11-f10-f01
+* */
+M21_EXPORT NumB math21_device_image_get_pixel_bilinear_interpolate(
+        MATH21_DEVICE_GLOBAL const NumR *data, NumR *value, NumN ich, NumR _ir, NumR _ic,
+        NumN nch, NumN nr, NumN nc, NumB isInterleaved) {
+    NumR x, y;
+    NumN ir = (NumN) _ir;
+    NumN ic = (NumN) _ic;
+    x = _ir - ir;
+    y = _ic - ic;
+    NumN index_a00, index_a10, index_a01, index_a11;
+    NumR f00, f10, f01, f11;
+    index_a00 = math21_device_image_get_1d_index(ich, ir, ic, nch, nr, nc, isInterleaved);
+    index_a10 = math21_device_image_get_1d_index(ich, ir + 1, ic, nch, nr, nc, isInterleaved);
+    index_a01 = math21_device_image_get_1d_index(ich, ir, ic + 1, nch, nr, nc, isInterleaved);
+    index_a11 = math21_device_image_get_1d_index(ich, ir + 1, ic + 1, nch, nr, nc,
+                                                 isInterleaved);
+    if (index_a00 == 0 && index_a11 == 0) {
+        return 0;
+    }
+    f00 = index_a00 != 0 ? data[index_a00] : data[index_a11];
+    f10 = index_a10 != 0 ? data[index_a10] : f00;
+    f01 = index_a01 != 0 ? data[index_a01] : f00;
+    f11 = index_a11 != 0 ? data[index_a11] : f00;
+    *value = f00 * (1 - x) * (1 - y) + f10 * x * (1 - y) + f01 * (1 - x) * y + f11 * x * y;
+    return 1;
+}
+
+// 1-based index
+M21_EXPORT NumB math21_device_image_get_pixel_bilinear_interpolate_32(
+        MATH21_DEVICE_GLOBAL const NumR32 *data, NumR *value, NumN ich, NumR _ir, NumR _ic,
+        NumN nch, NumN nr, NumN nc, NumB isInterleaved) {
+    NumR x, y;
+    NumN ir = (NumN) _ir;
+    NumN ic = (NumN) _ic;
+    x = _ir - ir;
+    y = _ic - ic;
+    NumN index_a00, index_a10, index_a01, index_a11;
+    NumR f00, f10, f01, f11;
+    index_a00 = math21_device_image_get_1d_index(ich, ir, ic, nch, nr, nc, isInterleaved);
+    index_a10 = math21_device_image_get_1d_index(ich, ir + 1, ic, nch, nr, nc, isInterleaved);
+    index_a01 = math21_device_image_get_1d_index(ich, ir, ic + 1, nch, nr, nc, isInterleaved);
+    index_a11 = math21_device_image_get_1d_index(ich, ir + 1, ic + 1, nch, nr, nc,
+                                                 isInterleaved);
+    if (index_a00 == 0 && index_a11 == 0) {
+        return 0;
+    }
+    f00 = index_a00 != 0 ? data[index_a00] : data[index_a11];
+    f10 = index_a10 != 0 ? data[index_a10] : f00;
+    f01 = index_a01 != 0 ? data[index_a01] : f00;
+    f11 = index_a11 != 0 ? data[index_a11] : f00;
+    *value = f00 * (1 - x) * (1 - y) + f10 * x * (1 - y) + f01 * (1 - x) * y + f11 * x * y;
+    return 1;
+}
+
+M21_EXPORT void math21_device_index_1d_to_2d(NumN *x1, NumN *x2, NumN y,
+                                             NumN d1, NumN d2) {
+    y -= 1;
+    *x2 = y % d2 + 1;
+    y = y / d2;
+    *x1 = y % d1 + 1;
+}
+
+M21_EXPORT void math21_device_index_1d_to_2d_fast(NumN *x1, NumN *x2, NumN y,
+                                                  NumN d2) {
+    y -= 1;
+    *x2 = y % d2 + 1;
+    *x1 = y / d2 + 1;
+}
+
+M21_EXPORT void math21_device_index_2d_to_1d(NumN x1, NumN x2, NumN *py,
+                                             NumN d1, NumN d2) {
+    NumN y = 0;
+    y *= d1;
+    y += (x1 - 1);
+    y *= d2;
+    y += (x2 - 1);
+    *py = y + 1;
+}
+
+M21_EXPORT void math21_device_index_2d_to_1d_fast(NumN x1, NumN x2, NumN *py,
+                                                  NumN d2) {
+    *py = (x1 - 1) * d2 + x2;
+}
+
+// global 2
+M21_EXPORT void math21_device_index_add_to_c_2(NumN n, const NumN *A, MATH21_DEVICE_GLOBAL const NumN *B, NumN *C) {
+    NumN i;
+    for (i = 1; i <= n; ++i) {
+        C[i] = A[i] + B[i];
+    }
+}
+
+M21_EXPORT void math21_device_broadcast_index_to_original_brackets(const NumN *index,
+                                                                   MATH21_DEVICE_GLOBAL const NumN *d_ori,
+                                                                   NumN *index_ori, NumN dims_ori) {
+    for (NumN i = 1; i <= dims_ori; ++i) {
+        if (d_ori[i] != 1) {
+            index_ori[i] = index[i];
+        } else {
+            index_ori[i] = 1;
+        }
+    }
+}
+
+M21_EXPORT NumN *math21_device_pointer_NumN_decrease_one(NumN *p) {
+    return p - 1;
+}
+
+// see math21_operator_container_replace_inc
+// replace A by R where A(i) = x.
+M21_EXPORT void math21_device_index_replace_inc(NumN n, const NumN *A, NumN *B, const NumN *R, NumN x) {
+    NumN i;
+    NumN j = 1;
+    for (i = 1; i <= n; ++i) {
+        if (A[i] == x) {
+            B[i] = R[j];
+            ++j;
+        } else {
+            B[i] = A[i];
+        }
+    }
+}
+
+// see math21_operator_container_replace_inc
+// replace A by R where A(i) = x.
+M21_EXPORT void math21_device_index_replace_inc_global_1(
+        NumN n, MATH21_DEVICE_GLOBAL const NumN *A, NumN *B, const NumN *R, NumN x) {
+    NumN i;
+    NumN j = 1;
+    for (i = 1; i <= n; ++i) {
+        if (A[i] == x) {
+            B[i] = R[j];
+            ++j;
+        } else {
+            B[i] = A[i];
+        }
+    }
+}
+
+M21_EXPORT NumR math21_device_f_sum(NumR value, NumR x, NumN i) {
+    return value + x;
+}
+
+M21_EXPORT NumR math21_device_f_norm1(NumR value, NumR x, NumN i) {
+    x = x >= 0 ? x : -x;
+    return value + x;
+}
+
+M21_EXPORT NumR math21_device_f_norm2_square(NumR value, NumR x, NumN i) {
+    return value + x * x;
+}
+
+// y = (x1+x2+x3)/3
+// (y*2+x3)/3 = (2/3)*y + (1/3)*x3
+M21_EXPORT NumR math21_device_f_mean(NumR value, NumR x, NumN i) {
+    return (i - 1) / (NumR) i * value + 1 / (NumR) i * x;
+}
+
+M21_EXPORT NumR math21_device_f_max(NumR value, NumR x, NumN i) {
+    if (i == 1) {
+        return x;
+    } else {
+        return x > value ? x : value;
+    }
+}
+
+M21_EXPORT NumR math21_device_f_min(NumR value, NumR x, NumN i) {
+    if (i == 1) {
+        return x;
+    } else {
+        return x < value ? x : value;
+    }
+}
+
+M21_EXPORT NumR math21_device_f_argmin(NumR value, NumR x, NumN *i_value, NumN i_x, NumN i) {
+    if (i == 1) {
+        *i_value = i_x;
+        return x;
+    } else {
+        if (x < value) {
+            *i_value = i_x;
+            return x;
+        } else {
+            return value;
+        }
+    }
+}
+
+M21_EXPORT NumR math21_device_f_argmax(NumR value, NumR x, NumN *i_value, NumN i_x, NumN i) {
+    if (i == 1) {
+        *i_value = i_x;
+        return x;
+    } else {
+        if (x > value) {
+            *i_value = i_x;
+            return x;
+        } else {
+            return value;
+        }
+    }
+}
+
+M21_EXPORT NumR math21_device_f_inner_product(NumR value, NumR x, NumR y, NumN i) {
+    return value + x * y;
+}
+
+M21_EXPORT NumR math21_device_f_distance_1(NumR value, NumR x, NumR y, NumN i) {
+    NumR v = x - y;
+    v = v >= 0 ? v : -v;
+    return value + v;
+}
+
+M21_EXPORT NumR math21_device_f_distance_2_square(NumR value, NumR x, NumR y, NumN i) {
+    NumR v = x - y;
+    return value + v * v;
+}
+
+M21_EXPORT NumR math21_device_f_add(NumR x, NumR y) {
+    return x + y;
+}
+
+M21_EXPORT NumR math21_device_f_subtract(NumR x, NumR y) {
+    return x - y;
+}
+
+M21_EXPORT NumR math21_device_f_multiply(NumR x, NumR y) {
+    return x * y;
+}
+
+M21_EXPORT NumR math21_device_f_divide(NumR x, NumR y) {
+    return x / y;
+}
+
+M21_EXPORT NumR math21_device_f_is_equal(NumR x, NumR y) {
+    return x == y ? 1 : 0;
+}
+
+M21_EXPORT NumR math21_device_f_sin(NumR x) {
+    return sin(x);
+}
+
+M21_EXPORT NumR math21_device_f_cos(NumR x) {
+    return cos(x);
+}
+
+M21_EXPORT NumR math21_device_f_tan(NumR x) {
+    return tan(x);
+}
+
+M21_EXPORT NumR math21_device_f_exp(NumR x) {
+    return exp(x);
+}
+
+M21_EXPORT NumR math21_device_f_log(NumR x) {
+    return log(x);
+}
+
+M21_EXPORT NumR math21_device_f_abs(NumR x) {
+    return x >= 0 ? x : -x;
+}
+
+M21_EXPORT NumR math21_device_f_xk_subtract(NumR k, NumR x) {
+    return x - k;
+}
+
+M21_EXPORT NumR math21_device_f_xk_divide(NumR k, NumR x) {
+    return x / k;
+}
+
+M21_EXPORT NumR math21_device_f_kx_pow(NumR k, NumR x) {
+    return pow(k, x);
+}
+
+M21_EXPORT NumR math21_device_f_xk_pow(NumR k, NumR x) {
+    return pow(x, k);
+}
+
+M21_EXPORT NumR math21_device_f_addto(NumR value, NumR x) {
+    return value + x;
+}
+
+M21_EXPORT NumR math21_device_f_multo(NumR value, NumR x) {
+    return value * x;
+}
+
